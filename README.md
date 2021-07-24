@@ -1,19 +1,39 @@
 # stage4viscuit
 
+## 설명
 A new Flutter project for viscuit's stage
 
+## 데이터 타입(Class)
+### 1. StageObject
+#### 역할
+Stage 내 나타나는 그림에 대응되는 객체로, 다뤄지는 최소 단위 객체이다.
+  
+#### 구현
+특정 자료구조를 가지지 않는다.
 
-# API
-### StageObject Class
-- 설명 : Stage를 위한 최소 단위 객체
-- instance field
+#### 속성 및 메소드
++ 속성
     1. (String) type : <이미지|클릭|소리> - 일단 넣음
     2. (String) name : 해당 type에 대한 uri
     3. (Offset) offset : 
     4. (double) rotation : 회전각
++ 메소드
 
-### Instruction Class
-- 설명 : 명령어
+
+### 2. SOList
+
+
+### 3. SOMap
+
+
+
+
+## public API
+
+
+
+---
+
 
 ### InstructionSection Class
 - 설명 : 한 명령어에 대해 Stage 내 대응되는 SO & 관련된 연산 
