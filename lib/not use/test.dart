@@ -1,6 +1,6 @@
-import 'package:stage4viscuit/classes/debug.dart';
+import '../classes/test/debug.dart';
 
-import "classes/instruction.dart";
+import 'instruction.dart';
 import 'package:flutter/material.dart';
 
 

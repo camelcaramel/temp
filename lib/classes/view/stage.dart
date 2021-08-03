@@ -1,9 +1,80 @@
-import 'component.dart';
+import 'package:stage4viscuit/classes/component/exception.dart';
+
+import '../component/component.dart';
 import 'package:more/collection.dart';
-import 'engine.dart';
+import '../model/engine.dart';
 import 'dart:ui' as UI;
-import 'controller.dart';
+import '../presenter/controller.dart';
 import 'package:flutter/material.dart';
+import '../presenter/presenter.dart';
+
+enum StageStatus {
+  RUN,
+  STOP,
+  PAUSE,
+}
+
+class Stage {
+  static late final Stage instance;
+  static bool _isCreated = false;
+  static void create(AnimationController animationController, setState) {
+    if(_isCreated) return;
+
+    instance = Stage._(animationController, setState);
+    _isCreated = true;
+  }
+
+  final AnimationController animationController;
+  final setState;
+  late final Presenter presenter;
+  StageStatus status;
+
+  Stage._(this.animationController, this.setState) : status = StageStatus.STOP {
+    presenter = Presenter(stage: this);
+
+    animationController.addListener(() {
+
+      setState(() {
+
+      });
+    });
+    animationController.addStatusListener((status) {
+      if(status == AnimationStatus.completed) {
+        if(presenter.storage.erStorage.isEmpty) throw NoElementException();
+        presenter.engineResult = presenter.storage.erStorage.poll();
+      }
+    });
+  }
+
+  void draw(Canvas canvas) {
+    switch(status) {
+      case StageStatus.STOP:
+        SOMap soMap = presenter.storage.msStorage.base;
+
+        break;
+      case StageStatus.PAUSE:
+
+        break;
+      case StageStatus.RUN:
+
+        break;
+    }
+  }
+
+  void stop() async {
+    await presenter.stop();
+
+    status = StageStatus.STOP;
+    animationController.reset();
+  }
+  void start() async {
+    await presenter.start();
+
+    status = StageStatus.RUN;
+    animationController.repeat();
+  }
+}
+
 
 class Stage {
   final ImageSource imageSource;
@@ -50,6 +121,7 @@ class Stage {
 //  - 로드 중인지
 //  - 최신 상태인지
 //  - 기타 등등
+
 class StageSource {
   static late final StageSource instance;
 
@@ -159,3 +231,4 @@ class _DraggableBlankBoxState extends State<DraggableBlankBox> {
     );
   }
 }
+

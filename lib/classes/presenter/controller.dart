@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:stage4viscuit/classes/instruction.dart';
-import 'package:stage4viscuit/classes/stage.dart';
-import 'package:stage4viscuit/classes/engine.dart';
-import 'package:stage4viscuit/classes/component.dart';
+import '../../not use/instruction.dart';
+import '../view/stage.dart';
+import '../model/engine.dart';
+import '../component/component.dart';
 import 'dart:ui' as UI;
 import 'package:flutter/animation.dart';
-import 'util_.dart';
+import '../../not use/util_.dart';
 
 
 // TODO : 명령어 파싱 디버깅 ✔

@@ -1,19 +1,12 @@
-import 'dart:ui';
 import 'package:collection/collection.dart';
-
-/*
-enum SOKey {
-  TYPE,
-  NAME,
-  OFFSET,
-  ROTATION,
-}
-*/
+import 'dart:ui' as UI;
+import 'dart:math';
+import 'animation.dart';
 
 class StageObject {
   String type;
   String name;
-  Offset offset;
+  UI.Offset offset;
   double rotation;
   // Size size;
   dynamic _forTween;
@@ -21,7 +14,7 @@ class StageObject {
   static final Function _forTweenIfEndNull = (double x) => 1 - x;
 
   StageObject(this.name, this.offset, this.rotation, [this.type = "empty", this._forTween]);
-  StageObject.named({required String name, required Offset offset, required double rotation, String type = "empty", dynamic forTween}) : this(name, offset, rotation, type, forTween);
+  StageObject.named({required String name, required UI.Offset offset, required double rotation, String type = "empty", dynamic forTween}) : this(name, offset, rotation, type, forTween);
   StageObject.copy(StageObject origin)
       : type = origin.type,
         name = origin.name,
@@ -30,7 +23,7 @@ class StageObject {
   StageObject.empty()
       : type = "empty",
         name = "empty",
-        offset = Offset.infinite,
+        offset = UI.Offset.infinite,
         rotation = double.infinity;
 
   /*
@@ -97,7 +90,7 @@ class StageObject {
       );
     }
     return StageObject.named(   // DUPLICATE, MERGE, ONE
-    type: type,
+      type: type,
       name: name,
       offset: offset - another.offset,
       rotation: rotation - another.rotation
@@ -114,13 +107,14 @@ class StageObject {
   }
 }
 
-abstract class SOUnitCopyable<T> {
+abstract class Copyable<T> {
   // 호출의 주체에 대해 SO 단위까지 깊은 복사를 수행한다.
   T copy();
+  T deepCopy();
 }
 
 // 최대한 SOMap 내부적으로만 사용
-class SOList extends DelegatingList<StageObject> implements SOUnitCopyable<SOList> {
+class SOList extends DelegatingList<StageObject> implements Copyable<SOList> {
   final List<StageObject> listOfSO;
 
   SOList() : this._([]);
@@ -133,6 +127,14 @@ class SOList extends DelegatingList<StageObject> implements SOUnitCopyable<SOLis
     copy.listOfSO.addAll(this.listOfSO);
     return copy;
   }
+  SOList deepCopy() {
+    SOList copy = SOList();
+    copy.listOfSO.addAll(this.listOfSO.map((e) {
+      return StageObject.copy(e);
+    }));
+    return copy;
+  }
+
 
   StageObject operator [](var idx) {
     if(length <= idx) {
@@ -207,7 +209,7 @@ class SOList extends DelegatingList<StageObject> implements SOUnitCopyable<SOLis
    */
 }
 
-class SOMap extends DelegatingMap<String, SOList> implements SOUnitCopyable<SOMap> {
+class SOMap extends DelegatingMap<String, SOList> implements Copyable<SOMap> {
   final Map<String, SOList> mapOfSO;
 
   SOMap() : this._({});
@@ -217,6 +219,13 @@ class SOMap extends DelegatingMap<String, SOList> implements SOUnitCopyable<SOMa
     SOMap copy = SOMap();
     for(MapEntry<dynamic, SOList> entry in entries) {
       copy[entry.key] = entry.value.copy();
+    }
+    return copy;
+  }
+  SOMap deepCopy() {
+    SOMap copy = SOMap();
+    for(MapEntry<dynamic, SOList> entry in entries) {
+      copy[entry.key] = entry.value.deepCopy();
     }
     return copy;
   }
@@ -237,7 +246,7 @@ class SOMap extends DelegatingMap<String, SOList> implements SOUnitCopyable<SOMa
   }
 
   // 전체 SO를 다루는 연산
-  void translate(Offset offset) {
+  void translate(UI.Offset offset) {
     for(SOList listOfSO in values) {
       listOfSO.forEach((so) => so.offset += offset);
     }
@@ -270,5 +279,142 @@ class SOMap extends DelegatingMap<String, SOList> implements SOUnitCopyable<SOMa
       s += "\t${entry.key} : ${entry.value}";
     }
     return s + "}\n";
+  }
+}
+
+class Instruction {
+  static const double MARGIN = 10; // ADJUST
+  final SOMap _head;
+  final SOMap _body;
+  // EdgeInsets을 사용하는 것도 고려해볼 것
+  late final double _top;
+  late final double _left;
+  late final double _bottom;
+  late final double _right;
+  late final StageObject relativeCriterionSO;
+
+  late UI.Offset absoluteOffset = UI.Offset.zero;
+
+  late Map<String, AnimationType> correspondingATMap;
+
+  Instruction(this._head, this._body) {
+    Iterable<StageObject> headIterable = _head.iteratorOnSO();
+    relativeCriterionSO = headIterable.first;
+
+    _head.translate(-relativeCriterionSO.offset);
+    _body.translate(-relativeCriterionSO.offset);
+    _calcSizeWithMargin(headIterable);
+    correspondingATMap = _getAnimationType();
+  }
+
+  _calcSizeWithMargin(Iterable<StageObject> headIterable) {
+    double top = double.infinity, bottom = double.negativeInfinity;
+    double left = double.infinity, right = double.negativeInfinity;
+
+    for(StageObject so in headIterable) {
+      top = min(top, so.offset.dy);
+      bottom = max(bottom, so.offset.dy);
+      left = min(left, so.offset.dx);
+      right = max(right, so.offset.dx);
+    }
+
+    _top = relativeCriterionSO.offset.dy - top + MARGIN;
+    _left = relativeCriterionSO.offset.dx - left + MARGIN;
+    _bottom = bottom - relativeCriterionSO.offset.dy + MARGIN;
+    _right = right - relativeCriterionSO.offset.dx + MARGIN;
+  }
+
+  Map<String, AnimationType> _getAnimationType() {
+    Set<String> setOfNameOnHeadAndBody = <String> {};
+    Map<String, AnimationType> result = {};
+
+    setOfNameOnHeadAndBody.addAll(head.keys);
+    setOfNameOnHeadAndBody.addAll(body.keys);
+
+    late AnimationType type;
+    for(String nameOfSO in setOfNameOnHeadAndBody) {
+      int hLen = _head[nameOfSO].length,
+          bLen = _body[nameOfSO].length;
+
+      if (hLen == 1 && bLen > 1)
+        type = AnimationType.DUPLICATE;
+      else if (hLen > 1 && bLen == 1)
+        type = AnimationType.MERGE;
+      else if (hLen > 1 && bLen > 1)
+        type = AnimationType.MANY;
+      else if (hLen == 0)
+        type = AnimationType.CREATE;
+      else if (bLen == 0)
+        type = AnimationType.VANISH;
+      else if (hLen == 1 && bLen == 1) type = AnimationType.ONE;
+
+      result[nameOfSO] = type;
+    }
+
+    return result;
+  }
+
+  set setAbsoluteOffsetToCriterion(UI.Offset offset) => absoluteOffset = offset;
+  SOMap get head {
+    _head.translate(-relativeCriterionSO.offset + absoluteOffset);
+    return _head;
+  }
+  SOMap get body {
+    _body.translate(-relativeCriterionSO.offset + absoluteOffset);
+    return _body;
+  }
+  UI.Rect get possibleSection {
+    return UI.Rect.fromLTRB(
+        absoluteOffset.dx - _left,
+        absoluteOffset.dy - _top,
+        absoluteOffset.dx + _right,
+        absoluteOffset.dy + _bottom
+    );
+  }
+}
+
+class EngineResult {
+  late List<InstructionSection> listOfIS;
+  late SOMap begin;
+  late SOMap end;
+  late SOMap unchanged;
+
+  EngineResult(this.listOfIS, this.begin, this.end, this.unchanged);
+}
+
+class InstructionSection {
+  Instruction instruction;
+  SOMap correspondingSOMap;
+  late SOMap finalSOMap;
+  int specificity = 0;
+  late UI.Offset absoluteOffset;
+
+  //late List<Tween<StageObject>> _bindListOfSO;
+
+  InstructionSection(this.instruction) : correspondingSOMap = SOMap();
+  InstructionSection.copy(InstructionSection origin)
+      : instruction = origin.instruction,
+        correspondingSOMap = origin.correspondingSOMap.copy(),
+        specificity = origin.specificity,
+        absoluteOffset = origin.absoluteOffset;
+
+
+  // correspondingSOMap, absoluteOffset을 구성하기 위한 명령어
+  void addSO(StageObject so) {
+    correspondingSOMap.addSO(so);
+  }
+  void removeSO(StageObject so) {
+    correspondingSOMap[so.name].remove(so);
+  }
+  bool isSelectedSO(StageObject so) {
+    if(!correspondingSOMap.containsKey(so.name)) return false;
+    return correspondingSOMap[so.name].contains(so);
+  }
+
+  // finalSOMap을 InstructionSection마다 저장
+  // 매 순간 계산하는 방법을 생각해보았으나 시간에서 너무 오버헤드가 일어날 것 같음
+  void makeFinalSOMap() {
+    instruction.setAbsoluteOffsetToCriterion = absoluteOffset;
+    finalSOMap = instruction.body.deepCopy();
   }
 }

@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:stage4viscuit/classes/controller.dart';
+import 'classes/presenter/controller.dart';
 
 void main() {
   runApp(MyApp());

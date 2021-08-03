@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as UI;
-import 'controller.dart';
+import '../presenter/controller.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';

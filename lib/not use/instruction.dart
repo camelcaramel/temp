@@ -1,11 +1,9 @@
-import 'component.dart';
+import '../classes/component/component.dart';
 import 'dart:convert';
 import 'dart:ui' as UI;
 import 'dart:math';
-import 'animation.dart';
-import 'util_.dart';
-import 'controller.dart';
-import 'debug.dart';
+import '../classes/presenter/controller.dart';
+import '../classes/test/debug.dart';
 
 class Instruction {
   static const double MARGIN = 10; // ADJUST

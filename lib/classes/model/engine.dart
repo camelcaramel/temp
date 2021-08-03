@@ -1,21 +1,66 @@
+import 'dart:async';
 import 'dart:collection';
-
 import 'package:flutter/cupertino.dart';
-
-import 'instruction.dart';
-import 'component.dart';
-import 'animation.dart';
-import 'dart:ui';
+import 'package:flutter/services.dart';
+import '../component/component.dart';
+import '../presenter/presenter.dart';
+import '../model/storage.dart';
 
 class Engine {
+  final Presenter presenter;
+  final Storage storage;
+  late bool canRun;
+  late Completer engineStop;
 
-  late List<InstructionSection> _listOfIS;
+  Engine({required this.presenter, required this.storage});
 
-  Engine() {
-    InstructionSource.instance = InstructionSource();
+  void start() {
+    var stream = run();
+    canRun = true;
+    engineStop = Completer();
+    stream.listen(
+        (e) {
+          storage.erStorage.push(e);
+        },
+        onDone: () {
+          engineStop.complete();
+        }
+    );
+  }
+  Future<void> stop() async { // start()를 사용할 수 있을 때 future가 끝남
+    canRun = false;
+    return engineStop.future;
   }
 
-  // signal 형태로 호출
+  Stream<EngineResult> run() async* {
+    while(canRun) {
+      // checking conditions...
+      if(storage.erStorage.remainSpace <= 0) continue;
+
+      SOMap begin = storage.erStorage.nextBegin;
+
+      List<InstructionSection> listOfIS;
+      listOfIS = findIS(begin);
+      listOfIS = selectIS(listOfIS);
+      deriveFinalSOMapOn(listOfIS);
+
+      SOMap end = begin.copy();
+      SOMap unchanged = begin.copy();
+      for(var instructionSection in listOfIS) {
+        for(StageObject so in instructionSection.correspondingSOMap.iteratorOnSO()) {
+          end.removeSO(so);
+          unchanged.removeSO(so);
+        }
+        for(StageObject so in instructionSection.finalSOMap.iteratorOnSO()) {
+          end.addSO(so);
+        }
+      }
+
+      yield EngineResult(listOfIS, begin, end, unchanged);
+    }
+  }
+
+  /*
   List<InstructionSection> ready(SOMap soMap) { // Animation's Status == dismissed
 
     List<InstructionSection> listOfIS;
@@ -46,10 +91,12 @@ class Engine {
     return soMap;
   }
 
-  List<InstructionSection> findInstructionSections(SOMap soMap) {
+   */
+
+  List<InstructionSection> findIS(SOMap soMap) {
     List<InstructionSection> result = [];
 
-    for(Instruction instruction in InstructionSource.instance.instructions) {
+    for(Instruction instruction in storage.inStorage.get()) {
 
       for(int i = 0; i < soMap[instruction.relativeCriterionSO.name].length; i++) {
         StageObject so = soMap[instruction.relativeCriterionSO.name][i];
@@ -59,7 +106,7 @@ class Engine {
         InstructionSection section = InstructionSection(instruction);
         section.addSO(so);
 
-        _DFS(
+        _dfs(
           section: section,
           listOfHead: List.from(instruction.head.iteratorOnSO(), growable: false),
           mapOfSOOnStage: soMap,
@@ -73,7 +120,7 @@ class Engine {
   }
 
   // 일반적으로 하나의 깊이만을 들어감 -> average cost = O(d); d = 명령어의 크기
-  void _DFS({required InstructionSection section,
+  void _dfs({required InstructionSection section,
             required listOfHead,
             required SOMap mapOfSOOnStage,
             required int depth,
@@ -100,7 +147,7 @@ class Engine {
         section.addSO(so);
         section.specificity += specificity;
 
-        _DFS(
+        _dfs(
             section: section,
             listOfHead: listOfHead,
             mapOfSOOnStage: mapOfSOOnStage,
@@ -123,7 +170,7 @@ class Engine {
     return func(distanceSquared);
   }
 
-  List<InstructionSection> selectInstructionSections(List<InstructionSection> listOfIS) {
+  List<InstructionSection> selectIS(List<InstructionSection> listOfIS) {
     List<InstructionSection> result = [];
 
     // 정렬이 unstable 이라서 무작위 뽑기를 안해도 괜찮을 것 같다.
@@ -151,6 +198,7 @@ c:  for(var instructionSection in listOfIS) {
     return result;
   }
 
+  /*
   List<InstructionSection> sameSpecificityRandomizer(List<InstructionSection> listOfIS) {
     List<InstructionSection> result = [];
     late List<int> numbers;
@@ -173,136 +221,13 @@ c:  for(var instructionSection in listOfIS) {
 
     return result;
   }
-
-  void readyForInstructionSection(List<InstructionSection> listOfIS) {
+   */
+  void deriveFinalSOMapOn(List<InstructionSection> listOfIS) {
     for(var instructionSection in listOfIS) {
-      instructionSection.ready();
+      instructionSection.makeFinalSOMap();
     }
   }
 }
-
-class InstructionSection {
-  Instruction? instruction;
-  SOMap correspondingSOMap;
-  int specificity = 0;
-  late Offset absoluteOffset;
-
-  late SOMap finalSOMap;
-  late List<Tween<StageObject>> _bindListOfSO;
-
-  InstructionSection(this.instruction) : correspondingSOMap = SOMap();
-  InstructionSection.copy(InstructionSection origin)
-    : instruction = origin.instruction,
-      correspondingSOMap = origin.correspondingSOMap.copy(),
-      specificity = origin.specificity,
-      absoluteOffset = origin.absoluteOffset;
-
-
-  // correspondingSOMap, absoluteOffset을 구성하기 위한 명령어
-  void addSO(StageObject so) {
-    correspondingSOMap.addSO(so);
-  }
-  void removeSO(StageObject so) {
-    correspondingSOMap[so.name].remove(so);
-  }
-  bool isSelectedSO(StageObject so) {
-    if(correspondingSOMap.containsKey(so)) return false;
-    return correspondingSOMap[so].contains(so);
-  }
-
-  void ready() {
-    makeFinalSOMap();
-    bindSOOnHeadAndBody();
-  }
-  // finalSOMap을 InstructionSection마다 저장
-  // 매 순간 계산하는 방법을 생각해보았으나 시간에서 너무 오버헤드가 일어날 것 같음
-  void makeFinalSOMap() {
-    instruction!.setAbsoluteOffsetToCriterion = absoluteOffset;
-    finalSOMap = instruction!.body;
-  }
-
-  // correspondingSOMap, finalSOMap 내 SO를 correspondingATMap을 기준으로 묶기
-  void bindSOOnHeadAndBody() {
-
-    for(MapEntry<String, AnimationType> entry in instruction!.correspondingATMap.entries) {
-      switch(entry.value) {
-        case AnimationType.DUPLICATE: {
-          StageObject begin = correspondingSOMap[entry.key][0];
-          for(StageObject end in finalSOMap[entry.key]) {
-            _bindListOfSO.add(Tween(
-              begin: begin,
-              end: end
-            ));
-          }
-          break;
-        }
-        case AnimationType.MERGE: {
-          StageObject end = finalSOMap[entry.key][0];
-          for(StageObject begin in correspondingSOMap[entry.key]) {
-            _bindListOfSO.add(Tween(
-              begin: begin,
-              end: end
-            ));
-          }
-          break;
-        }
-        case AnimationType.MANY: {
-          _many(entry.key);
-          break;
-        }
-        case AnimationType.CREATE: {
-          for(StageObject end in finalSOMap[entry.key]) {
-            _bindListOfSO.add(Tween(
-              begin: StageObject.empty(),
-              end: end
-            ));
-          }
-          break;
-        }
-        case AnimationType.VANISH: {
-          for(StageObject begin in correspondingSOMap[entry.key]) {
-            _bindListOfSO.add(Tween(
-              begin: begin,
-              end: StageObject.empty()
-            ));
-          }
-          break;
-        }
-        case AnimationType.ONE: {
-          _bindListOfSO.add(Tween(
-            begin: correspondingSOMap[entry.key][0],
-            end: finalSOMap[entry.key][0]
-          ));
-          break;
-        }
-        case AnimationType.UNDEFINED:
-        default:
-          break;
-      }
-    }
-  }
-
-  void _many(String name) {
-    for(StageObject begin in correspondingSOMap[name]) {
-      for(StageObject end in finalSOMap[name]) {
-        _bindListOfSO.add(Tween(
-          begin: begin,
-          end: end
-        ));
-      }
-    }
-  }
-
-  // correspondingSOMap, finalSOMap 을 토대로 중간 SO를 구하는 명령어
-  SOMap getMiddleSOMap(double d) {
-    SOMap middleSOMap = SOMap();
-    for(Tween<StageObject> tween in _bindListOfSO) {
-      middleSOMap.addSO(tween.transform(d));
-    }
-    return middleSOMap;
-  }
-}
-
 /*
 class InstructionSection1 {
   Instruction? instruction;
