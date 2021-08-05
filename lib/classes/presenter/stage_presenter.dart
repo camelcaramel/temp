@@ -1,30 +1,63 @@
-import '../model/storage.dart';
-import '../model/engine.dart';
+import 'package:flutter/animation.dart';
+import 'dart:async';
+import './presenter_interface.dart';
 import '../component/component.dart';
 import '../component/animation.dart';
+import '../view/view_interface.dart';
 import '../view/stage.dart';
-import 'package:flutter/animation.dart';
+import '../view_model/view_model.dart';
+import '../view_model/storage.dart';
 
+class StagePresenter implements Presenter {
+  late final View _stageOne;
+  late final View _stageTwo;
 
-class Presenter {
+  late final StageViewModel stageOneViewModel;
+  late final StageViewModel stageTwoViewModel;
 
-  late final Stage stage;
-  late final Storage storage;
-  late final Engine engine;
+  set stageView(View view) {
+    int stageNum = (view as Stage).stageNum;
+    switch(stageNum) {
+      case 1:
+        _stageOne = view;
+        _stageOne.refresh(viewModel: stageOneViewModel);
+        break;
+      case 2:
+        _stageTwo = view;
+        _stageTwo.refresh(viewModel: stageTwoViewModel);
+        break;
+    }
+  }
+
+  final Storage storage;
+
   late EngineResult engineResult;
 
-  Presenter({required this.stage}) {
-    storage = Storage(presenter: this);
-    engine = Engine(presenter: this, storage: storage);
+  static Future<StagePresenter> create([String? json]) async {
+    var stagePresenter = StagePresenter._(json);
+    await stagePresenter.initialize();
+    return stagePresenter;
+  }
+
+  StagePresenter._([String? json])
+      : storage = Storage(json),
+        stageOneViewModel = StageOneViewModel(),
+        stageTwoViewModel = StageTwoViewModel();
+
+
+  Future<void> initialize() async {
+    await storage.initialize();
   }
 
   Future<void> start() async {
+    storage.engine.start();
     await storage.erStorage.ready();
     engineResult = storage.erStorage.poll();
   }
   Future<void> stop() async {
-    await engine.stop();
+    await storage.engine.stop();
     storage.erStorage.clear();
+    storage.erStorage.prefill = Completer<void> ();
   }
 
   SOMap getUnchangedSOs() {

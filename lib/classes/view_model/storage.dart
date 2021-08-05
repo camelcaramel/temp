@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui' as UI;
+import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
-import '../presenter/presenter.dart';
+import 'package:stage4viscuit/classes/component/exception.dart';
 import '../component/component.dart';
+import 'engine.dart';
 
 enum StorageDest {
   ALL,
@@ -14,16 +17,29 @@ enum StorageDest {
 }
 
 class Storage {
-  final Presenter presenter;
-  final InstructionStorage inStorage = InstructionStorage();
-  final MemorableStatusStorage msStorage = MemorableStatusStorage();
-  final EngineResultStorage erStorage = EngineResultStorage();
+  late final InstructionStorage inStorage;
+  late final MemorableStatusStorage msStorage;
+  late final EngineResultStorage erStorage;
+  late final Engine engine;
 
-  Storage({required this.presenter, String? json}) {
+  // DEBUG : 로컬에 있는 이미지 파일을 토대로 수행
+  final ImageStorage imgStorage = ImageStorage();
+
+  Storage([String? json]) {
+    inStorage = InstructionStorage();
+    msStorage = MemorableStatusStorage();
+    erStorage = EngineResultStorage();
+    engine = Engine(storage: this);
+
    if(json == null) return;
 
    Map<String, dynamic> jsonObj = jsonDecode(json);
    _initFromJson(jsonObj);
+  }
+
+  Future<void> initialize() async {
+    await imgStorage.load();
+    await engine.initialize();
   }
 
   void _initFromJson(jsonObj) {
@@ -244,9 +260,58 @@ class EngineResultStorage extends DelegatingQueue<EngineResult> {
     return removeLast();
   }
   Future<void> ready() async {
+
     return prefill.future;
   }
   int get remainSpace {
     return MAX_SIZE - length;
+  }
+}
+
+class ImageStorage {
+  Map<String, UI.Image> _uiImgMap;
+  Map<String, Uint8List> _byteImgMap;
+
+  ImageStorage() : _uiImgMap = {}, _byteImgMap = {};
+
+  Iterable<String> get imgNames {
+    return _uiImgMap.keys;
+  }
+  UI.Image uiImg(String name) {
+    if(_uiImgMap[name] == null) throw NoSourceException();
+    return _uiImgMap[name]!.clone();
+  }
+  Uint8List byteImg(String name) {
+    if(_byteImgMap[name] == null) throw NoSourceException();
+    return _byteImgMap[name]!;
+  }
+  UI.Size size(String name) {
+    UI.Image img = uiImg(name);
+    return UI.Size(img.width.toDouble(), img.height.toDouble());
+  }
+
+
+  Future<void> load() async {
+    String jsonString = await rootBundle.loadString("asset/imageData.json");
+    var jsonObj = jsonDecode(jsonString);
+
+    for(MapEntry<String, dynamic> entry in jsonObj["images"].entries) {
+      await _load(entry.key, entry.value);
+    }
+  }
+
+  Future<void> _load(String name, String fileName) async {
+    ByteData data = await rootBundle.load("asset/images/$fileName");
+
+    Uint8List list = Uint8List.view(data.buffer);
+    _byteImgMap[name] = list;
+
+    Completer<void> completer = Completer();
+    UI.decodeImageFromList(list, (UI.Image img) {
+      _uiImgMap[name] = img;
+      completer.complete();
+    });
+
+    return completer.future;
   }
 }

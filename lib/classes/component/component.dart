@@ -149,64 +149,6 @@ class SOList extends DelegatingList<StageObject> implements Copyable<SOList> {
     s += listOfSO.join(", ");
     return s + "]\n";
   }
-
-  /*
-  SOList(this.listOfSO);
-  SOList.empty() : listOfSO = [];
-  SOList.copy(SOList origin)
-    : listOfSO = List.from(origin.listOfSO);
-
-   */
-  /*
-  void add(StageObject so) {
-    listOfSO.add(so);
-  }
-  void addAllFromIterable(Iterable<StageObject> iterable) {
-    listOfSO.addAll(iterable);
-  }
-  void addAllFromSOList(SOList soList) {
-    listOfSO.addAll(soList.listOfSO);
-  }
-  void remove(StageObject so) {
-    listOfSO.remove(so);
-  }
-  bool contains(StageObject so) {
-    return listOfSO.contains(so);
-  }
-
-  List<StageObject> toList() {
-    return listOfSO;
-  }
-  void translateZero(Offset offset) {
-    for(int i = 0; i < listOfSO.length; i++) {
-      listOfSO[i].offset = listOfSO[i].offset + offset;
-    }
-  }
-  StageObject operator[] (idx) {
-    return idx >= listOfSO.length ? StageObject.empty() : listOfSO[idx];
-  }
-  static List<double> calcDistanceOfUDLR(SOListable impl, Offset origin) {
-    double up = double.infinity, down = double.negativeInfinity;
-    double left = double.infinity, right = double.negativeInfinity;
-    for(StageObject so in impl.toList()) {
-      up = min(up, so.offset.dy);
-      down = max(down, so.offset.dy);
-      left = min(left, so.offset.dx);
-      right = max(right, so.offset.dx);
-    }
-
-    up -= origin.dy;
-    down -= origin.dy;
-    left -= origin.dx;
-    right -= origin.dx;
-
-    return <double> [up, down, left, right];
-  }
-
-  StageObject get first => listOfSO[0];
-  int get length => listOfSO.length;
-
-   */
 }
 
 class SOMap extends DelegatingMap<String, SOList> implements Copyable<SOMap> {

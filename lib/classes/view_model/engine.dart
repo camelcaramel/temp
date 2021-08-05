@@ -3,16 +3,18 @@ import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../component/component.dart';
-import '../presenter/presenter.dart';
-import '../model/storage.dart';
+import './storage.dart';
 
 class Engine {
-  final Presenter presenter;
   final Storage storage;
   late bool canRun;
   late Completer engineStop;
 
-  Engine({required this.presenter, required this.storage});
+  Engine({required this.storage});
+
+  Future<void> initialize() async {
+
+  }
 
   void start() {
     var stream = run();
@@ -128,7 +130,7 @@ class Engine {
   {
     if(listOfHead.length == depth) {
       InstructionSection foundSection = InstructionSection.copy(section);
-      foundSection.absoluteOffset = section.instruction!.absoluteOffset;
+      foundSection.absoluteOffset = section.instruction.absoluteOffset;
       result.add(foundSection);
     }
 
@@ -139,7 +141,7 @@ class Engine {
       so = mapOfSOOnStage[instructionSO.name][i];
 
       int specificity = calcSpecificity(instructionSO.offset, so.offset);
-      if(!section.instruction!.possibleSection.contains(so.offset) ||
+      if(!section.instruction.possibleSection.contains(so.offset) ||
           section.isSelectedSO(so) ||
           specificity == 0
       ) continue;

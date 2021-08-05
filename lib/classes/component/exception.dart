@@ -9,3 +9,9 @@ class NoElementException {
     return "원소가 존재하지 않습니다.";
   }
 }
+
+class NoSourceException {
+  toString() {
+    return "해당하는 자원이 존재하지 않습니다.";
+  }
+}

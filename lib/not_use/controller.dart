@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import '../../not use/instruction.dart';
-import '../view/stage.dart';
-import '../model/engine.dart';
-import '../component/component.dart';
+import 'instruction.dart';
+import 'stage_before.dart';
+import '../classes/model/engine.dart';
+import '../classes/component/component.dart';
 import 'dart:ui' as UI;
 import 'package:flutter/animation.dart';
-import '../../not use/util_.dart';
+import 'util_.dart';
 
 
 // TODO : 명령어 파싱 디버깅 ✔
