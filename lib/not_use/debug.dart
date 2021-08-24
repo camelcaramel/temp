@@ -42,17 +42,14 @@
 
 //   Uint8List getByteImage(String name) {
 
-//     // TODO: implement getByteImage
 //     throw UnimplementedError();
 //   }
 
 //   UI.Image getImage(String name) {
-//     // TODO: implement getImage
 //     throw UnimplementedError();
 //   }
 
 //   UI.Size getSize(String name) {
-//     // TODO: implement getSize
 //     throw UnimplementedError();
 //   }
 

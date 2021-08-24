@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             // TODO: error handling need
-            print("firebasae init error occured");
+            print("firebase init error occurred");
           }
           if (snapshot.connectionState == ConnectionState.done) {
             print('connection no problem');

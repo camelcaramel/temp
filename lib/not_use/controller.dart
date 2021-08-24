@@ -3,18 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'instruction.dart';
 import 'stage_before.dart';
-import '../classes/model/engine.dart';
 import '../classes/component/component.dart';
 import 'dart:ui' as UI;
 import 'package:flutter/animation.dart';
-import 'util_.dart';
 
 
-// TODO : 명령어 파싱 디버깅 ✔
-// TODO : 명령어 내 name을 적절한 값으로 치환 ✔
-// TODO : 에셋 로드 전 circular 표시 ✔
-// TODO : 명령어 json 입력창 구현
-// TODO : 아웃풋창 구현
 
 
 abstract class ImageSource {

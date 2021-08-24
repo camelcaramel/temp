@@ -203,7 +203,6 @@ class _DraggableBlankBoxState extends State<DraggableBlankBox> {
           onDragEnd: (var details) {
             final Offset mouseUpOffset = details.offset - widget.paintOffset;
 
-            // TODO: canvas의 사이즈를 조사하여 넘어가는 이미지를 그리지 않는 처리 필요
 
             widget.so.offset = mouseUpOffset;
             //StageSource.instance.add(widget.so);

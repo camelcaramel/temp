@@ -1,7 +1,14 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/animation.dart';
 import 'dart:ui' as UI;
 import 'dart:math';
 import 'animation.dart';
+import '../component/exception.dart';
+
+// TODO: engine_test를 위해서 AnimationType을 잠시 비활성화
+
+typedef AnimationDouble = double;
+typedef TestVisibleCallBack = bool Function(AnimationDouble value);
 
 class StageObject {
   String type;
@@ -9,54 +16,64 @@ class StageObject {
   UI.Offset offset;
   double rotation;
   // Size size;
-  dynamic _forTween;
-  static final Function _forTweenIfBeginNull = (double x) => x;
-  static final Function _forTweenIfEndNull = (double x) => 1 - x;
+  late TestVisibleCallBack isVisible = (value) => true;
 
-  StageObject(this.name, this.offset, this.rotation, [this.type = "empty", this._forTween]);
-  StageObject.named({required String name, required UI.Offset offset, required double rotation, String type = "empty", dynamic forTween}) : this(name, offset, rotation, type, forTween);
-  StageObject.copy(StageObject origin)
-      : type = origin.type,
-        name = origin.name,
-        offset = origin.offset,
-        rotation = origin.rotation;
-  StageObject.empty()
-      : type = "empty",
-        name = "empty",
-        offset = UI.Offset.infinite,
-        rotation = double.infinity;
+  static final Function _fadeIn = (double x) => x;
+  static final Function _fadeOut = (double x) => 1 - x;
 
-  /*
-  dynamic get(SOKey key) {
-    switch(key) {
-      case SOKey.TYPE : return type;
-      case SOKey.NAME : return name;
-      case SOKey.OFFSET : return offset;
-      case SOKey.ROTATION : return rotation;
-      default: return null;
-    }
-  }
-   */
+  StageObject(this.name, this.offset, this.rotation, [this.type = "empty"]);
+  StageObject.named({required this.name, required this.offset, required this.rotation, this.type = "empty"});
+  StageObject.clone(StageObject origin) : type = origin.type, name = origin.name, offset = origin.offset, rotation = origin.rotation;
+
   bool contentEquals(StageObject so) {
     return type == so.type &&
         name == so.name &&
         offset == so.offset &&
         rotation == so.rotation;
   }
-  bool isEmpty() {
-    return name == "empty";
-  }
   String toString() {
     return '{type: $type, name: $name, offset: $offset, rotation: $rotation}';
   }
 
+  static StageObject lerp(StageObject? begin, StageObject? end, double d) {
+    if(begin == null && end == null) throw Exception("적어도 하나의 값은 null이 아니어야 합니다.");
+
+    bool isTwoNotNull = begin != null && end != null;
+    if(isTwoNotNull) {
+      if(begin.name != end.name || begin.type != end.type) throw Exception("StageObject의 타입과 이름이 같아야 합니다.");
+    }
+
+    UI.Offset interpolatedOffset = isTwoNotNull ? UI.Offset.lerp(begin.offset, end.offset, d)! : (begin ?? end)!.offset;
+    double interpolatedRotation = isTwoNotNull ? begin.rotation + (1 - d) * end.rotation : (begin ?? end)!.rotation;
+
+    StageObject interpolatedSO = StageObject.named(
+        name: (begin ?? end)!.name,
+        offset: interpolatedOffset,
+        rotation: interpolatedRotation
+    );
+    if(begin == null) {
+      interpolatedSO.isVisible = (value) => _fadeIn(value) >= 0.5;
+    } else if(end == null) {
+      interpolatedSO.isVisible = (value) => _fadeOut(value) >= 0.5;
+    }
+
+    return interpolatedSO;
+  }
+  /*
+  bool get isNone => type == "none" && name == "none";
+
+  StageObject.non1e()
+      : type = "none",
+        name = "none",
+        offset = UI.Offset.infinite,
+        rotation = double.infinity;
 
   // Tween을 위한 연산자 오버라이딩; 연산자는 다음의 식을 위해 사용됨
   // result = begin + (end - begin) * t;
   StageObject operator+ (StageObject another) {
     if(another._forTween != null) {
       return another._forTween < 0.5 ?
-      StageObject.empty() :
+      StageObject.none() :
       StageObject.named(
         type: another.type,
         name: another.name,
@@ -72,16 +89,16 @@ class StageObject {
     );
   }
   StageObject operator- (StageObject another) {
-    if(isEmpty()) {
-      return StageObject.named(   // end == StageObject.empty(); -> VANISH
+    if(isNone) {
+      return StageObject._(   // end == StageObject.empty(); -> VANISH
         type: another.type,
         name: another.name,
         offset: another.offset,
         rotation: another.rotation,
         forTween: _forTweenIfEndNull
       );
-    } else if(another.isEmpty()) {
-      return StageObject.named(   // begin == StageObject.empty(); -> CREATE
+    } else if(another.isNone) {
+      return StageObject._(   // begin == StageObject.empty(); -> CREATE
         type: type,
         name: name,
         offset: offset,
@@ -105,6 +122,8 @@ class StageObject {
     rotation *= d;
     return this;
   }
+
+   */
 }
 
 abstract class Copyable<T> {
@@ -113,66 +132,166 @@ abstract class Copyable<T> {
   T deepCopy();
 }
 
+abstract class DefaultSOOperation {
+  void add(StageObject so);
+  bool removeFirstIdentityEqual(StageObject so);
+  bool removeFirstContentEqual(StageObject so);
+  bool removeAllIdentityEqual(StageObject so);
+  bool removeAllContentEqual(StageObject so);
+  bool containIdentityEqual(StageObject so);
+  bool containContentEqual(StageObject so);
+}
+
+
 // 최대한 SOMap 내부적으로만 사용
-class SOList extends DelegatingList<StageObject> implements Copyable<SOList> {
-  final List<StageObject> listOfSO;
+class SOList extends DelegatingList<StageObject> implements Copyable<SOList>, DefaultSOOperation {
+  final List<StageObject> _listOfSO;
 
   SOList() : this._([]);
   SOList.empty() : this._(List.empty());
-  SOList._(this.listOfSO) : super(listOfSO);
-  //SOList.from(List<StageObject> list) : this.listOfSO = list, super(list);
+  SOList._(this._listOfSO) : super(_listOfSO);
 
   SOList copy() {
     SOList copy = SOList();
-    copy.listOfSO.addAll(this.listOfSO);
+    copy._listOfSO.addAll(this._listOfSO);
     return copy;
   }
   SOList deepCopy() {
     SOList copy = SOList();
-    copy.listOfSO.addAll(this.listOfSO.map((e) {
-      return StageObject.copy(e);
+    copy._listOfSO.addAll(this._listOfSO.map((e) {
+      return StageObject.clone(e);
     }));
     return copy;
   }
-
-
-  StageObject operator [](var idx) {
-    if(length <= idx) {
-      print("warning: SOMapIndexOutOfBoundException - $idx");
-      return StageObject.empty();
-    }
-    return listOfSO[idx];
+  void add(StageObject so) {
+    _listOfSO.add(so);
   }
+  bool removeFirstIdentityEqual(StageObject so) {
+    for(int i = 0; i < _listOfSO.length; i++) {
+      if(!identical(so, _listOfSO[i])) continue;
 
+      _listOfSO.removeAt(i);
+      return true;
+    }
+    return false;
+  }
+  bool removeFirstContentEqual(StageObject so) {
+    for(int i = 0; i < _listOfSO.length; i++) {
+      if(!so.contentEquals(_listOfSO[i])) continue;
+
+      _listOfSO.removeAt(i);
+      return true;
+    }
+    return false;
+  }
+  bool removeAllIdentityEqual(StageObject so) {
+    int originLength = _listOfSO.length;
+    _listOfSO.removeWhere((e) => identical(e, so));
+    return originLength != _listOfSO.length;
+  }
+  bool removeAllContentEqual(StageObject so) {
+    int originLength = _listOfSO.length;
+    _listOfSO.removeWhere((e) => so.contentEquals(e));
+    return originLength != _listOfSO.length;
+  }
+  bool containIdentityEqual(StageObject so) {
+    for(int i = 0; i < _listOfSO.length; i++) {
+      if(!identical(so, _listOfSO[i])) continue;
+      return true;
+    }
+    return false;
+  }
+  bool containContentEqual(StageObject so) {
+    for(int i = 0; i < _listOfSO.length; i++) {
+      if(!so.contentEquals(_listOfSO[i])) continue;
+      return true;
+    }
+    return false;
+  }
   String toString() {
     String s = "[";
-    s += listOfSO.join(", ");
+    s += _listOfSO.join(", ");
     return s + "]\n";
   }
 }
 
-class SOMap extends DelegatingMap<String, SOList> implements Copyable<SOMap> {
-  final Map<String, SOList> mapOfSO;
+class SOMap extends DelegatingMap<String, SOList> implements Copyable<SOMap>, DefaultSOOperation {
+  final Map<String, SOList> _mapOfSO;
 
   SOMap() : this._({});
-  SOMap._(this.mapOfSO) : super(mapOfSO);
+  SOMap._(this._mapOfSO) : super(_mapOfSO);
+  factory SOMap.fromIterable(Iterable<StageObject> iterable) {
+    var soMap = SOMap();
+    for(var so in iterable) soMap.add(so);
+    return soMap;
+  }
 
   SOMap copy() {
     SOMap copy = SOMap();
-    for(MapEntry<dynamic, SOList> entry in entries) {
+    for(MapEntry<String, SOList> entry in _mapOfSO.entries) {
       copy[entry.key] = entry.value.copy();
     }
     return copy;
   }
   SOMap deepCopy() {
     SOMap copy = SOMap();
-    for(MapEntry<dynamic, SOList> entry in entries) {
+    for(MapEntry<String, SOList> entry in _mapOfSO.entries) {
       copy[entry.key] = entry.value.deepCopy();
     }
     return copy;
   }
+  void add(StageObject so) {
+    String name = so.name;
+    _mapOfSO.putIfAbsent(name, () => SOList()).add(so);
+  }
+  bool removeFirstIdentityEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false; // 해당 이름을 가진 SOList가 없는 경우
+
+    return soList.removeFirstIdentityEqual(so);
+    // 해당 이름을 가진 SOList는 있지만 안에 so가 존재하지 않을 경우 false 리턴
+  }
+  bool removeFirstContentEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false;
+
+    return soList.removeFirstContentEqual(so);
+  }
+  bool removeAllIdentityEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false;
+
+    return soList.removeAllIdentityEqual(so);
+  }
+  bool removeAllContentEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false;
+
+    return soList.removeAllContentEqual(so);
+  }
+  bool containIdentityEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false;
+
+    return soList.containIdentityEqual(so);
+
+  }
+  bool containContentEqual(StageObject so) {
+    SOList? soList = _mapOfSO[so.name];
+    if(soList == null) return false;
+
+    return soList.containContentEqual(so);
+  }
+  String toString() {
+    String s = "{\n";
+    for(MapEntry<String, SOList> entry in _mapOfSO.entries) {
+      s += "\t${entry.key} : ${entry.value}";
+    }
+    return s + "}\n";
+  }
 
   // SO 단위의 연산
+  /*
   void addSO(StageObject so) {
     putIfAbsent(so.name, () => SOList()).add(so);
   }
@@ -186,70 +305,83 @@ class SOMap extends DelegatingMap<String, SOList> implements Copyable<SOMap> {
     if(!containsKey(so.name)) return false;
     return this[so.name].contains(so);
   }
+   */
 
-  // 전체 SO를 다루는 연산
-  void translate(UI.Offset offset) {
-    for(SOList listOfSO in values) {
-      listOfSO.forEach((so) => so.offset += offset);
+  // SOMap만의 특수한 연산들
+  Map<String, List<UI.Offset>> pickOffsetFromSOMap() {
+    Map<String, List<UI.Offset>> offsetMap = {};
+
+    for(MapEntry<String, SOList> entry in this.entries) {
+      List<UI.Offset> offsetList = [];
+      entry.value.forEach((so) {
+        offsetList.add(so.offset);
+      });
+      offsetMap[entry.key] = offsetList;
     }
-  }
-  Iterable<StageObject> iteratorOnSO() {
-    Iterable<StageObject> iterator = Iterable.empty();
-    for(SOList list in values) {
-      iterator = iterator.followedBy(list);
-    }
-    return iterator;
-  }
-  void addAll(covariant SOMap another) {
-    for(MapEntry<String, SOList> entry in another.entries) {
-      mapOfSO.putIfAbsent(entry.key, () => SOList()).addAll(entry.value);
-    }
+
+    return offsetMap;
   }
 
-  // 널이 나오지 않도록 오버라이딩; 단, 경고를 출력
-  SOList operator[] (var key) {
-    if(mapOfSO[key] == null) {
-      print("warning: KeyIsNotValid - SOMap[$key]");
-      return SOList.empty();
+  Iterable<StageObject> iterableOnSO() {
+    Iterable<StageObject> iterable = Iterable.empty();
+    for(SOList list in this.values) {
+      iterable = iterable.followedBy(list);
     }
-    return mapOfSO[key]!;
-  }
-
-  String toString() {
-    String s = "{\n";
-    for(MapEntry<String, SOList> entry in mapOfSO.entries) {
-      s += "\t${entry.key} : ${entry.value}";
-    }
-    return s + "}\n";
+    return iterable;
   }
 }
 
+// Map<dynamic, List<T>> 꼴의 Map을 List형식으로 바꾼다.
+// SOMap을 List로 바꾼 값 내 원소와 SOMap에서 Offset만 뽑고 이뤄진
+// Map을 List로 바꾼 값 내 원소가 서로 대응될 수 있도록 만들었다.
+List<T> mapToList<T>(Map<dynamic, List<T>> map) {
+  List<T> list = [];
+  for(MapEntry<dynamic, List<T>> entry in map.entries) {
+    list.addAll(entry.value);
+  }
+  return list;
+}
+// SOMap이나 SOMap에서 Offset만 뽑고 이뤼진 Map이나 절대좌표를 기준으로
+// 좌표변환이 일어날 수 있도록 만들었다.
+void translate<T>(Map<dynamic, List<T>> map, UI.Offset absoluteOffset) {
+  for(MapEntry<dynamic, List<T>> entry in map.entries) {
+    if(T == StageObject) {
+      entry.value.forEach((so) {
+        (so as StageObject).offset = so.offset + absoluteOffset;
+      });
+    } else /*T == UI.Offset*/ {
+      for(int i = 0; i < entry.value.length; i++) {
+        entry.value[i] = ((entry.value[i] as UI.Offset) + absoluteOffset) as T;
+      }
+    }
+  }
+}
+
+
 class Instruction {
   static const double MARGIN = 10; // ADJUST
-  final SOMap _head;
-  final SOMap _body;
-  // EdgeInsets을 사용하는 것도 고려해볼 것
-  late final double _top;
-  late final double _left;
-  late final double _bottom;
-  late final double _right;
-  late final StageObject relativeCriterionSO;
-
-  late UI.Offset absoluteOffset = UI.Offset.zero;
-
+  late final double top;
+  late final double left;
+  late final double bottom;
+  late final double right;
+  final String id;
+  SOMap head;
+  SOMap body;
   late Map<String, AnimationType> correspondingATMap;
 
-  Instruction(this._head, this._body) {
-    Iterable<StageObject> headIterable = _head.iteratorOnSO();
-    relativeCriterionSO = headIterable.first;
+  Instruction(this.head, this.body, {required this.id}) {
+    if(head.isEmpty) throw Exception("head에는 적어도 하나의 StageObject가 있어야 합니다.");
 
-    _head.translate(-relativeCriterionSO.offset);
-    _body.translate(-relativeCriterionSO.offset);
-    _calcSizeWithMargin(headIterable);
+    List<StageObject> listOfHead = mapToList(head);
+    var firstSOOffset = listOfHead.first.offset + UI.Offset.zero;
+
+    translate(head, -firstSOOffset);
+    translate(body, -firstSOOffset);
+    _calcSizeWithMargin(listOfHead);
     correspondingATMap = _getAnimationType();
   }
 
-  _calcSizeWithMargin(Iterable<StageObject> headIterable) {
+  void _calcSizeWithMargin(Iterable<StageObject> headIterable) {
     double top = double.infinity, bottom = double.negativeInfinity;
     double left = double.infinity, right = double.negativeInfinity;
 
@@ -260,12 +392,11 @@ class Instruction {
       right = max(right, so.offset.dx);
     }
 
-    _top = relativeCriterionSO.offset.dy - top + MARGIN;
-    _left = relativeCriterionSO.offset.dx - left + MARGIN;
-    _bottom = bottom - relativeCriterionSO.offset.dy + MARGIN;
-    _right = right - relativeCriterionSO.offset.dx + MARGIN;
+    this.top = -top + MARGIN;
+    this.left = -left + MARGIN;
+    this.bottom = bottom + MARGIN;
+    this.right = right + MARGIN;
   }
-
   Map<String, AnimationType> _getAnimationType() {
     Set<String> setOfNameOnHeadAndBody = <String> {};
     Map<String, AnimationType> result = {};
@@ -275,8 +406,8 @@ class Instruction {
 
     late AnimationType type;
     for(String nameOfSO in setOfNameOnHeadAndBody) {
-      int hLen = _head[nameOfSO].length,
-          bLen = _body[nameOfSO].length;
+      int hLen = head[nameOfSO]?.length ?? 0,
+          bLen = body[nameOfSO]?.length ?? 0;
 
       if (hLen == 1 && bLen > 1)
         type = AnimationType.DUPLICATE;
@@ -296,67 +427,161 @@ class Instruction {
     return result;
   }
 
-  set setAbsoluteOffsetToCriterion(UI.Offset offset) => absoluteOffset = offset;
-  SOMap get head {
-    _head.translate(-relativeCriterionSO.offset + absoluteOffset);
-    return _head;
+  toString() {
+    return "Instruction\n" +
+          "#####head\n$head" +
+          "#####body\n$body" + "\n";
   }
-  SOMap get body {
-    _body.translate(-relativeCriterionSO.offset + absoluteOffset);
-    return _body;
+}
+
+class StageObjectTween extends Tween<StageObject> {
+  StageObjectTween(StageObject? begin, StageObject? end) : super(begin: begin, end: end);
+
+  StageObject lerp(double t) {
+    return StageObject.lerp(begin, end, t);
   }
-  UI.Rect get possibleSection {
-    return UI.Rect.fromLTRB(
-        absoluteOffset.dx - _left,
-        absoluteOffset.dy - _top,
-        absoluteOffset.dx + _right,
-        absoluteOffset.dy + _bottom
+}
+
+class KeyFrame {
+  SOMap begin;
+  List<StageObject> middleOfUnChanged;
+  List<StageObjectTween> middleOfChanged;
+  SOMap end;
+  //late SOMap unchanged;
+
+  // TODO : 추가적인 속성(생성 시간, 어떤 명령어들로 생성되었는지 등)을 추가할 것
+  KeyFrame(this.begin, this.middleOfUnChanged, this.middleOfChanged, this.end);
+
+  Frame getFrameAt(AnimationDouble value) {
+    SOMap soMap = SOMap();
+    for(var so in middleOfUnChanged) {
+      soMap.add(so);
+    }
+    for(var tween in middleOfChanged) {
+      StageObject so = tween.lerp(value);
+      soMap.add(so);
+    }
+
+    return Frame(soMap, value);
+  }
+
+}
+// correspondingSOMap, finalSOMap 내 SO를 correspondingATMap을 기준으로 묶기
+/*
+  List<Tween<StageObject>> _bindSOOnHeadAndBody(InstructionSection section) {
+    List<Tween<StageObject>> bindList = [];
+    for(MapEntry<String, AnimationType> entry in section.instruction.correspondingATMap.entries) {
+
+      switch(entry.value) {
+        case AnimationType.DUPLICATE: {
+          StageObject begin = section.correspondingSOMap[entry.key][0];
+          for(StageObject end in section.finalSOMap[entry.key]) {
+            bindList.add(Tween(
+                begin: begin,
+                end: end
+            ));
+          }
+          break;
+        }
+        case AnimationType.MERGE: {
+          StageObject end = section.finalSOMap[entry.key][0];
+          for(StageObject begin in section.correspondingSOMap[entry.key]) {
+            bindList.add(Tween(
+                begin: begin,
+                end: end
+            ));
+          }
+          break;
+        }
+        case AnimationType.MANY: {
+          bindList.addAll(_many(section, entry.key));
+          break;
+        }
+        case AnimationType.CREATE: {
+          for(StageObject end in section.finalSOMap[entry.key]) {
+            bindList.add(Tween(
+                begin: StageObject.none(),
+                end: end
+            ));
+          }
+          break;
+        }
+        case AnimationType.VANISH: {
+          for(StageObject begin in section.correspondingSOMap[entry.key]) {
+            bindList.add(Tween(
+                begin: begin,
+                end: StageObject.none()
+            ));
+          }
+          break;
+        }
+        case AnimationType.ONE: {
+          bindList.add(Tween(
+              begin: section.correspondingSOMap[entry.key][0],
+              end: section.finalSOMap[entry.key][0]
+          ));
+          break;
+        }
+        case AnimationType.UNDEFINED:
+        default:
+          break;
+      }
+    }
+
+    return bindList;
+  }
+
+  List<Tween<StageObject>> _many(InstructionSection section, String name) {
+    List<Tween<StageObject>> bindList = [];
+    for(StageObject begin in section.correspondingSOMap[name]) {
+      for(StageObject end in section.finalSOMap[name]) {
+        bindList.add(Tween(
+            begin: begin,
+            end: end
+        ));
+      }
+    }
+
+    return bindList;
+  }
+
+   */
+
+class Frame {
+  SOMap soMap;
+  AnimationDouble value;
+
+  Frame(this.soMap, this.value);
+}
+
+// fillSuitableISOn의 재귀호출이 일어날 때 트리의 노드를
+// 위아래로 이동하면서 바뀌지 않는 값을 가짐
+class PartiallyPreparedInstructionSection {
+  final Instruction instruction;
+  final UI.Offset absoluteOffset;
+
+  PartiallyPreparedInstructionSection({required this.instruction, required this.absoluteOffset});
+
+  InstructionSection getInstructionSection({required SOMap before, required int specificity}) {
+    SOMap after = instruction.body.deepCopy();
+    translate(after, absoluteOffset);
+
+    return InstructionSection(
+      correspondingATMap: instruction.correspondingATMap,
+      before: before,
+      after: after,
+      specificity: specificity,
+      absoluteOffset: absoluteOffset
     );
   }
 }
 
-class EngineResult {
-  late List<InstructionSection> listOfIS;
-  late SOMap begin;
-  late SOMap end;
-  late SOMap unchanged;
-
-  EngineResult(this.listOfIS, this.begin, this.end, this.unchanged);
-}
-
 class InstructionSection {
-  Instruction instruction;
-  SOMap correspondingSOMap;
-  late SOMap finalSOMap;
+  Map<String, AnimationType> correspondingATMap;
+  SOMap before;
+  SOMap after;
   int specificity = 0;
-  late UI.Offset absoluteOffset;
+  UI.Offset absoluteOffset;
 
-  //late List<Tween<StageObject>> _bindListOfSO;
-
-  InstructionSection(this.instruction) : correspondingSOMap = SOMap();
-  InstructionSection.copy(InstructionSection origin)
-      : instruction = origin.instruction,
-        correspondingSOMap = origin.correspondingSOMap.copy(),
-        specificity = origin.specificity,
-        absoluteOffset = origin.absoluteOffset;
-
-
-  // correspondingSOMap, absoluteOffset을 구성하기 위한 명령어
-  void addSO(StageObject so) {
-    correspondingSOMap.addSO(so);
-  }
-  void removeSO(StageObject so) {
-    correspondingSOMap[so.name].remove(so);
-  }
-  bool isSelectedSO(StageObject so) {
-    if(!correspondingSOMap.containsKey(so.name)) return false;
-    return correspondingSOMap[so.name].contains(so);
-  }
-
-  // finalSOMap을 InstructionSection마다 저장
-  // 매 순간 계산하는 방법을 생각해보았으나 시간에서 너무 오버헤드가 일어날 것 같음
-  void makeFinalSOMap() {
-    instruction.setAbsoluteOffsetToCriterion = absoluteOffset;
-    finalSOMap = instruction.body.deepCopy();
-  }
+  InstructionSection({required this.correspondingATMap, required this.before, required this.after, required this.specificity, required this.absoluteOffset});
 }

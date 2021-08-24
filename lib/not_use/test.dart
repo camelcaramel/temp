@@ -1,4 +1,4 @@
-import '../debug.dart';
+import 'debug.dart';
 
 import 'instruction.dart';
 import 'package:flutter/material.dart';

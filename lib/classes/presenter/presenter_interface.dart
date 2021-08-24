@@ -1,3 +1,2 @@
-abstract class Presenter {
 
-}
+abstract class Presenter {}

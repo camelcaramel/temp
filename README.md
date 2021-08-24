@@ -40,3 +40,7 @@ Stage 내 나타나는 그림에 대응되는 객체로, 다뤄지는 최소 단
 
 ### StageManager Class
 - 설명 : Stage 내 전반적인 일을 다룸; Stage에서 SO를 가져오기 & 그리기
+
+
+설명
+ScreenPresenter는 모든 Presenter의 루트

@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:ui' as UI;
 import 'dart:math';
 import 'controller.dart';
-import '../debug.dart';
+import 'debug.dart';
 
 class Instruction {
-  static const double MARGIN = 10; // ADJUST
+  static const double MARGIN = 10;
   final SOMap _head;
   final SOMap _body;
   // EdgeInsets을 사용하는 것도 고려해볼 것
@@ -179,7 +179,6 @@ class InstructionSource {
   }
    */
 
-  // DEBUG
   Iterator<String> iterator = LocalImageSource.instance.images.keys.iterator;
   Map<String, String> nameMap = {};
   SOMap _createSOMapFromJsonObj(var soJsonObjArr) {

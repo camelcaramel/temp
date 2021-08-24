@@ -1,155 +1,146 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as UI;
-import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
-import 'package:stage4viscuit/classes/component/exception.dart';
 import '../component/component.dart';
-import 'engine.dart';
 
-enum StorageDest {
-  ALL,
-  INST,
-  STFUL,
-  STLESS,
+abstract class Storage {
+  bool _lock = false;
+  void lock();
+  void unlock();
+  StorageSnapshot snapshot();
+  void add(dynamic value);
+  void remove(dynamic target);
+  void clear();
+}
+abstract class StorageSnapshot {}
+
+class InstructionStorage implements Storage {
+  List<Instruction> storage = [];
+  bool _lock = false;
+
+  void lock() => _lock = true;
+  void unlock() => _lock = false;
+  StorageSnapshot snapshot() {
+    if(_lock == false) throw Exception("Snapshot을 얻기 전에 객체를 잠그세요.");
+    return InstructionStorageSnapshot(instructionStorage: this);
+  }
+  void add(covariant Instruction instruction) {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+    storage.add(instruction);
+  }
+  void remove(covariant Instruction target) {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+
+    for(int i = 0; i < storage.length; i++) {
+      if(storage[i].id != target.id) continue;
+      storage.removeAt(i);
+      break;
+    }
+  }
+  void clear() {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+
+    storage.clear();
+  }
+  String toString() {
+    String s = "######InstructionStorage######\n";
+    for (var instruction in storage) {
+      s += instruction.toString();
+    }
+    return s;
+  }
+
+}
+class InstructionStorageSnapshot implements StorageSnapshot {
+  InstructionStorage instructionStorage;
+  // offsetMapPerInstruction은 각각의 명령어 내 head 내
+  // SOList 내 StageObject의 Offset값만을 저장하고 있다.
+  late Map<String, Map<String, List<UI.Offset>>> offsetMapPerInstruction = {};
+  late Map<String, UI.Offset> absoluteOffsetMapPerInstruction = {};
+
+  InstructionStorageSnapshot({required this.instructionStorage}) {
+    for(Instruction instruction in instructionStorage.storage) {
+      String instructionID = instruction.id;
+
+      var offsetOfHead = instruction.head.pickOffsetFromSOMap();
+
+      offsetMapPerInstruction[instructionID] = offsetOfHead;
+      absoluteOffsetMapPerInstruction[instructionID] = UI.Offset.zero;
+    }
+  }
+
 }
 
-class Storage {
-  late final InstructionStorage inStorage;
-  late final MemorableStatusStorage msStorage;
-  late final EngineResultStorage erStorage;
-  late final Engine engine;
+class StageStorage implements Storage {
+  SOMap storage = SOMap();
+  bool _lock =false;
 
-  // DEBUG : 로컬에 있는 이미지 파일을 토대로 수행
-  final ImageStorage imgStorage = ImageStorage();
+  void lock() => _lock = true;
+  void unlock() => _lock = false;
+  StorageSnapshot snapshot() {
+    if(_lock == false) throw Exception("Snapshot을 얻기 전에 객체를 잠그세요.");
 
-  Storage([String? json]) {
-    inStorage = InstructionStorage();
-    msStorage = MemorableStatusStorage();
-    erStorage = EngineResultStorage();
-    engine = Engine(storage: this);
-
-   if(json == null) return;
-
-   Map<String, dynamic> jsonObj = jsonDecode(json);
-   _initFromJson(jsonObj);
+    return StageStorageSnapshot(base: storage.deepCopy());
   }
-
-  Future<void> initialize() async {
-    await imgStorage.load();
-    await engine.initialize();
+  void add(covariant StageObject so) {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+    storage.add(so);
   }
-
-  void _initFromJson(jsonObj) {
-    // init instructionStorage
-    for(var rule in jsonObj["rules"]) {
-      if(rule["type"] == "rule") {
-        SOMap head = _createSOMapFromJsonObj(rule["head"]);
-        SOMap body = _createSOMapFromJsonObj(rule["body"]);
-
-        inStorage.add(Instruction(head, body));
-      } else {
-        // 명령어 view에 안경에 올리지 않은 이미지의 경우
-      }
-    }
-
-    // init memorableStatusStorage
-    for(var so in jsonObj["stage"]) {
-      msStorage.addOnBase(so);
-    }
-
-    // init engineResultStorage
-    erStorage.nextBegin = msStorage.base;
+  void remove(covariant StageObject so) {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+    storage.removeAllIdentityEqual(so);
   }
-
-  SOMap _createSOMapFromJsonObj(var soJsonObjArr) {
-    SOMap soMap = SOMap();
-
-    for (var soJsonObj in soJsonObjArr) {
-      String type = soJsonObj["type"];
-      String name = soJsonObj["name"];
-
-      UI.Offset offset = UI.Offset(soJsonObj["x"].toDouble(), soJsonObj["y"].toDouble());
-      double rotation = soJsonObj["rotation"].toDouble();
-
-      soMap.addSO(StageObject.named(name: name, offset: offset, rotation: rotation, type: type));
-    }
-
-    return soMap;
+  void clear() {
+    if(_lock == true) throw Exception("현재 읽기만 가능합니다.");
+    storage.clear();
   }
-
-  /*
-  // read
-  String getState(StorageDest dest) {
-    String state = "";
-    switch(dest) {
-      case StorageDest.ALL:
-        state += instructionSource.state();
-        state += stfulStageStatus.state();
-        state += stlessStageStatus.state();
-        break;
-      case StorageDest.INST:
-        state = instructionSource.state();
-        break;
-      case StorageDest.STFUL:
-        state = stfulStageStatus.state();
-        break;
-      case StorageDest.STLESS:
-        state = stlessStageStatus.state();
-        break;
-    }
-    return state;
-  }
-
-  // update
-  void update(StorageDest dest, value) {
-    switch(dest) {
-      default:
-        throw UnsupportedException();
-    }
-  }
-
-  // delete
-  void delete(StorageDest dest, value) {
-    switch(dest) {
-      case StorageDest.INST:
-        instructionSource.delete(value);
-        break;
-      case StorageDest.STFUL:
-        stfulStageStatus.delete(value);
-        break;
-      case StorageDest.STLESS:
-        stlessStageStatus.delete(value);
-        break;
-      default:
-        throw UnsupportedException();
-    }
-  }
-  void clear(StorageDest dest) {
-    switch(dest) {
-      case StorageDest.ALL:
-        instructionSource.clear();
-        stfulStageStatus.clear();
-        stlessStageStatus.clear();
-        break;
-      case StorageDest.INST:
-        instructionSource.clear();
-        break;
-      case StorageDest.STFUL:
-        stfulStageStatus.clear();
-        break;
-      case StorageDest.STLESS:
-        stlessStageStatus.clear();
-        break;
-    }
-  }
-
-   */
 }
 
-class InstructionStorage {
+abstract class StageStorageSnapshotObserver {
+  void updateSSSnapshotSize(int size);
+}
+
+class StageStorageSnapshot extends DelegatingQueue<KeyFrame> implements StorageSnapshot {
+  SOMap latestEndOfSOMap;
+  Queue<KeyFrame> _queue;
+  int maxSize;
+  int minSize;
+  int startSize;
+  List<StageStorageSnapshotObserver> observers = [];
+  Completer<void> _overStartSize = Completer();
+
+  StageStorageSnapshot({required SOMap base, int maxSize = 30, int minSize = 1, int startSize = 3}) : this._(base, Queue(), maxSize, minSize, startSize);
+  StageStorageSnapshot._(this.latestEndOfSOMap, this._queue, this.maxSize, this.minSize, this.startSize) : super(_queue);
+
+  void register(StageStorageSnapshotObserver observer) {
+    observers.add(observer);
+    observer.updateSSSnapshotSize(_queue.length); // observer의 초기값 설정을 위해서
+  }
+  void updateSize(int size) {
+    //print("queue's size: ${_queue.length}");
+    for(var observer in observers) observer.updateSSSnapshotSize(size);
+  }
+
+  void push(KeyFrame keyFrame) {
+    if(_queue.length >= maxSize) throw Exception("Queue에 더 이상 넣을 수 없습니다.");
+    _queue.add(keyFrame);
+    latestEndOfSOMap = keyFrame.end;
+    updateSize(_queue.length);
+    if(!_overStartSize.isCompleted && _queue.length == startSize) _overStartSize.complete();
+  }
+  KeyFrame poll() {
+    if(_queue.length <= minSize) throw Exception("Queue에서 더 이상 빼낼 수 없습니다.");
+    KeyFrame first = _queue.removeFirst();
+    updateSize(_queue.length);
+    return first;
+  }
+
+  Future<void> get whenFilledAsStartSize => _overStartSize.future;
+}
+
+/*
+class InstructionStorage implements Storage {
   List<Instruction> storage;
 
   InstructionStorage() : storage = [];
@@ -166,51 +157,17 @@ class InstructionStorage {
   Iterable<Instruction> get() {
     return storage;
   }
-
-// DEBUG
-/*
-  Iterator<String> iterator = LocalImageSource.instance.images.keys.iterator;
-  Map<String, String> nameMap = {};
-  SOMap _createSOMapFromJsonObj(var soJsonObjArr) {
-    SOMap soMap = SOMap();
-
-    for (var soJsonObj in soJsonObjArr) {
-      String type = soJsonObj["type"];
-
-      String name = soJsonObj["name"];
-      if(nameMap.containsKey(name)) {
-        print("1: $name");
-        name = nameMap[name]!;
-      } else {
-        if(!iterator.moveNext()) {
-          throw "error: 준비된 이미지보다 더 많은 이미지를 필요로 합니다.";
-        }
-        nameMap[name] = iterator.current;
-        print("2: $name");
-        name = iterator.current;
-        print("3: $name");
-
-      }
-
-      UI.Offset offset = UI.Offset(soJsonObj["x"].toDouble(), soJsonObj["y"].toDouble());
-      double rotation = soJsonObj["rotation"].toDouble();
-
-      soMap.addSO(StageObject.named(name: name, offset: offset, rotation: rotation, type: type));
-    }
-
-    return soMap;
-  }
-   */
 }
-
-class MemorableStatusStorage {
+ */
+/*
+class StageSnapshotStorage implements Storage {
   SOMap base;
   List<StageObject> delta;
   int currentStep = 0;
 
   List<SOMap> snapshot;
 
-  MemorableStatusStorage() : base = SOMap(), delta = [], snapshot = [];
+  StageSnapshotStorage() : base = SOMap(), delta = [], snapshot = [];
 
   void addOnBase(StageObject so) {
     base.addSO(so);
@@ -241,77 +198,33 @@ class MemorableStatusStorage {
     return soMap;
   }
 }
-
-class EngineResultStorage extends DelegatingQueue<EngineResult> {
-  final Queue<EngineResult> storage;
+ */
+/*
+class EngineResultQueue extends DelegatingQueue<EngineResult> {
+  final Queue<EngineResult> _queue;
   static const MAX_SIZE = 30;
-  SOMap nextBegin;
   Completer<void> prefill = Completer();
 
-  EngineResultStorage() : this._(Queue(), SOMap());
-  EngineResultStorage._(this.storage, this.nextBegin) : super(storage);
+  EngineResultQueue() : this._(Queue());
+  EngineResultQueue._(this._queue) : super(_queue);
 
   void push(EngineResult result) {
     add(result);
-    nextBegin = result.end;
     if(!prefill.isCompleted && length >= 3) prefill.complete();
   }
   EngineResult poll() {
     return removeLast();
   }
+  EngineResult peek() {
+    return _queue.last;
+  }
   Future<void> ready() async {
-
     return prefill.future;
   }
   int get remainSpace {
     return MAX_SIZE - length;
   }
 }
-
-class ImageStorage {
-  Map<String, UI.Image> _uiImgMap;
-  Map<String, Uint8List> _byteImgMap;
-
-  ImageStorage() : _uiImgMap = {}, _byteImgMap = {};
-
-  Iterable<String> get imgNames {
-    return _uiImgMap.keys;
-  }
-  UI.Image uiImg(String name) {
-    if(_uiImgMap[name] == null) throw NoSourceException();
-    return _uiImgMap[name]!.clone();
-  }
-  Uint8List byteImg(String name) {
-    if(_byteImgMap[name] == null) throw NoSourceException();
-    return _byteImgMap[name]!;
-  }
-  UI.Size size(String name) {
-    UI.Image img = uiImg(name);
-    return UI.Size(img.width.toDouble(), img.height.toDouble());
-  }
+*/
 
 
-  Future<void> load() async {
-    String jsonString = await rootBundle.loadString("asset/imageData.json");
-    var jsonObj = jsonDecode(jsonString);
-
-    for(MapEntry<String, dynamic> entry in jsonObj["images"].entries) {
-      await _load(entry.key, entry.value);
-    }
-  }
-
-  Future<void> _load(String name, String fileName) async {
-    ByteData data = await rootBundle.load("asset/images/$fileName");
-
-    Uint8List list = Uint8List.view(data.buffer);
-    _byteImgMap[name] = list;
-
-    Completer<void> completer = Completer();
-    UI.decodeImageFromList(list, (UI.Image img) {
-      _uiImgMap[name] = img;
-      completer.complete();
-    });
-
-    return completer.future;
-  }
-}
