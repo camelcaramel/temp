@@ -27,10 +27,14 @@ class _SignUpPageState extends State<SignUpPage> {
         return Exception("user is empty error");
       } else {
         // 유저의 정보를 파이어스토어에 저장
-        FirebaseFirestore.instance
-            .collection("test_users")
-            .doc(user.uid)
-            .set({"email": id, "name": name}).then((value) {
+        // TODO: 여기 지금 카테고리가 무조건 선생으로 만들어지게 되어있음
+        FirebaseFirestore.instance.collection("Users").doc(user.uid).set({
+          "email": id,
+          "name": name,
+          "category": "teacher",
+          "uid": user.uid,
+          "projectList": []
+        }).then((value) {
           // 파이어스토어에 올바르게 저장이 된다면 아래 코드 실행
           print("register user info done");
           Navigator.pop(context);

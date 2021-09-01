@@ -2,7 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:stage4viscuit/profilePage/profilePage.dart';
+import 'package:stage4viscuit/userInfo/userInfo.dart';
 
 import 'login/loginPage.dart';
 
@@ -48,15 +49,56 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
+  bool isReady = false;
+  late UserData info;
+
+  String nullSaftyUid(User? user) {
+    if (user != null) {
+      if (user.uid.isEmpty) {
+        return "nothing";
+      } else {
+        print("useruid = ${user.uid}");
+        return user.uid;
+      }
+    } else {
+      return "nothing";
+    }
+  }
+
+  Map<String, dynamic> nullSaftyUserData(Map<String, dynamic>? data) {
+    if (data != null) {
+      return data;
+    } else {
+      throw ("error occured");
+    }
+  }
+
+  String nullSaftyStringCheck(String? s) {
+    if (s != null)
+      return s;
+    else
+      throw ("string is null when load profile page");
+  }
+
   @override
   Widget build(BuildContext context) {
+    // if (FirebaseAuth.instance.currentUser == null) {
+    //   return LoginPage();
+    // } else {
+    //   String? temp = FirebaseAuth.instance.currentUser?.uid;
+    //   String uid = nullSaftyStringCheck(temp);
+    //   return ProfilePage(uid);
+    // }
+    FirebaseAuth.instance.setPersistence(Persistence.NONE);
+    // 로그인 세션 유지 안함
     return StreamBuilder(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, AsyncSnapshot<User?> snapshot) {
         if (!snapshot.hasData) {
           return LoginPage();
         } else {
-          return MainPage(snapshot.data);
+          String uid = nullSaftyUid(snapshot.data);
+          return ProfilePage(uid);
         }
       },
     );
@@ -102,11 +144,24 @@ class _MainPageState extends State<MainPage> {
           child: TextButton(
               onPressed: () {
                 FirebaseAuth.instance.signOut();
-                Navigator.pop(context);
               },
               child: Text("logout")),
         ),
       );
     }
+  }
+}
+
+class ErrorPage extends StatefulWidget {
+  const ErrorPage(this.errorMessage, {Key? key}) : super(key: key);
+  final String errorMessage;
+  @override
+  _ErrorPageState createState() => _ErrorPageState();
+}
+
+class _ErrorPageState extends State<ErrorPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(child: Text(widget.errorMessage));
   }
 }

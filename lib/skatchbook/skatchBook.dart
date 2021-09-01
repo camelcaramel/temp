@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:stage4viscuit/profilePage/profilePage.dart';
+import 'package:stage4viscuit/projectData/projectData.dart';
 
 class SkatchBook extends StatefulWidget {
   const SkatchBook(this.projectBasicInfo, {Key? key}) : super(key: key);
-  final ProjectBasicInfo projectBasicInfo;
+  final ProjectData projectBasicInfo;
   @override
   _SkatchBookState createState() => _SkatchBookState();
 }

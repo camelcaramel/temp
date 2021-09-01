@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:stage4viscuit/login/loginStyleSheet.dart';
 import 'package:stage4viscuit/login/signUpPage.dart';
 import 'package:stage4viscuit/main.dart';
+import 'package:stage4viscuit/profilePage/profilePage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -15,6 +16,20 @@ class _LoginPageState extends State<LoginPage> {
   TextEditingController _idController = new TextEditingController();
   TextEditingController _passwordController = new TextEditingController();
   GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+
+  String nullSaftyUid(User? user) {
+    if (user != null) {
+      if (user.uid.isEmpty) {
+        return "nothing";
+      } else {
+        print("useruid = ${user.uid}");
+        return user.uid;
+      }
+    } else {
+      return "nothing";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,13 +63,16 @@ class _LoginPageState extends State<LoginPage> {
                             email: _idController.text,
                             password: _passwordController.text)
                         .then((value) {
+                      setState(() {});
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => MainPage(value.user)));
+                              builder: (context) =>
+                                  ProfilePage(nullSaftyUid(value.user))));
                     }).catchError((e) {
                       FirebaseAuthException error = e;
                       //TODO: 로그인 에러 잡는 코드 작성 필요
+                      print(e);
                       if (error.code == "hello") {}
                     });
                   },
