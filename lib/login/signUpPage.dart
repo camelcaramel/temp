@@ -14,6 +14,9 @@ class _SignUpPageState extends State<SignUpPage> {
   TextEditingController _passwordController = new TextEditingController();
   TextEditingController _userNameController = new TextEditingController();
 
+  var _type = false;
+  String _nowtype = 'student';
+
   void signUpProcess(String id, String password, String name) {
     FirebaseAuth.instance
         .createUserWithEmailAndPassword(email: id, password: password)
@@ -31,9 +34,10 @@ class _SignUpPageState extends State<SignUpPage> {
         FirebaseFirestore.instance.collection("Users").doc(user.uid).set({
           "email": id,
           "name": name,
-          "category": "teacher",
+          "category": _nowtype,
           "uid": user.uid,
-          "projectList": []
+          "projectList": [],
+          "classList": []
         }).then((value) {
           // 파이어스토어에 올바르게 저장이 된다면 아래 코드 실행
           print("register user info done");
@@ -68,18 +72,47 @@ class _SignUpPageState extends State<SignUpPage> {
           children: [
             TextFormField(
               controller: _userNameController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'User Name',
+              ),
             ),
             TextFormField(
               controller: _idController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'User E-mail',
+              ),
             ),
             TextFormField(
               controller: _passwordController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'User Password',
+              ),
+            ),
+            Row(
+              children: [
+                Text('Are you teacher?'),
+                Checkbox(
+                    value: _type,
+                    onChanged: (value) {
+                      setState(() {
+                        _type = value!;
+                        if (value) {
+                          _nowtype = 'student';
+                        } else {
+                          _nowtype = 'teacher';
+                        }
+                      });
+                    }),
+              ],
             ),
             TextButton(
                 onPressed: () {
-                  String email = _idController.text;
-                  String password = _passwordController.text;
-                  String userName = _userNameController.text;
+                  String email = _idController.text.trim();
+                  String password = _passwordController.text.trim();
+                  String userName = _userNameController.text.trim();
 
                   // 회원가입과 사용자 정보를 파이어스토어에 저장
                   signUpProcess(email, password, userName);

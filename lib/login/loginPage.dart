@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                     });
                   },
                   child: Text("Login")),
-              TextButton(onPressed: () {}, child: Text("Join The Class")),
+              //TextButton(onPressed: () {}, child: Text("Join The Class")),
               TextButton(
                   onPressed: () {
                     //TODO: 디버그 프린트 문 지우기

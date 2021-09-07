@@ -2,6 +2,10 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:stage4viscuit/class_file/presenter/MakeClassPresenter.dart';
+import 'package:stage4viscuit/class_file/view/JoinClass.dart';
+import 'package:stage4viscuit/class_file/view/MakeClass.dart';
+import 'package:stage4viscuit/class_file/view/ViewClass.dart';
 import 'package:stage4viscuit/projectData/projectData.dart';
 import 'package:stage4viscuit/skatchbook/skatchBook.dart';
 import 'package:stage4viscuit/userInfo/userInfo.dart';
@@ -201,6 +205,58 @@ class _ProfilePageState extends State<ProfilePage> {
         body: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                //새 클래스 제작
+                Container(
+                  width: 300,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => MakeClass(info)),
+                      );
+                    },
+                    child: Text('Make New Class!'),
+                  ),
+                ),
+                //현재 유저 클래스 확인
+                Container(
+                  width: 300,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      /*
+                      클래스 확인하는 화면
+                      */
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ViewClass(info)),
+                      );
+                    },
+                    child: Text('Your Class!'),
+                  ),
+                ),
+                Container(
+                  width: 300,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      /*
+                      클래스 코드로 참여하는 화면
+                      */
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => JoinClass(info)),
+                      );
+                    },
+                    child: Text('Join Class To Code!'),
+                  ),
+                )
+              ],
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
