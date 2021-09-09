@@ -124,3 +124,19 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 }
+
+void updateProject(String puid, String data) {
+  FirebaseFirestore.instance
+      .collection("Projects")
+      .doc(puid)
+      .update({"data": data, "updateDate": Timestamp.now()});
+}
+
+void updateThumbnail(String puid, String image) {
+  FirebaseFirestore.instance
+      .collection("ProjectCache")
+      .doc(puid)
+      .update({"thumbnail": image});
+}
+
+Future<String?> getProjectData(String puid) async {}
