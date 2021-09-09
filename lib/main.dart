@@ -82,13 +82,6 @@ class _SplashState extends State<Splash> {
 
   @override
   Widget build(BuildContext context) {
-    // if (FirebaseAuth.instance.currentUser == null) {
-    //   return LoginPage();
-    // } else {
-    //   String? temp = FirebaseAuth.instance.currentUser?.uid;
-    //   String uid = nullSaftyStringCheck(temp);
-    //   return ProfilePage(uid);
-    // }
     FirebaseAuth.instance.setPersistence(Persistence.NONE);
     // 로그인 세션 유지 안함
     return StreamBuilder(
