@@ -5,7 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:stage4viscuit/profilePage/profilePage.dart';
 import 'package:stage4viscuit/userInfo/userInfo.dart';
 
-import 'login/loginPage.dart';
+import 'package:stage4viscuit/login/loginPage.dart';
 
 void main() {
   runApp(MyApp());

@@ -18,28 +18,29 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String uid = "rF1WcFOen4Y8Zg0aGCosUeKmSzq2";
-    // return ProfilePage(uid);
+    //return ProfilePage(uid);
 
-    // return FutureBuilder(
-    //     future: _initalization,
-    //     builder: (context, snapshot) {
-    //       if (snapshot.hasError) {
-    //         // TODO: error handling need
-    //         print("firebase init error occurred");
-    //       }
-    //       if (snapshot.connectionState == ConnectionState.done) {
-    //         print('connection no problem');
+    return FutureBuilder(
+        future: _initalization,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            // TODO: error handling need
+            print("firebase init error occurred");
+          }
+          if (snapshot.connectionState == ConnectionState.done) {
+            print('connection no problem');
 
-    return MaterialApp(
-      title: 'GiDDong',
-      theme: ThemeData(primarySwatch: Colors.blue, primaryColor: Colors.black),
-      home: ProfilePage(uid),
-      // home: Splash(),
-      debugShowCheckedModeBanner: false,
-    );
-    //       }
-    //       return CircularProgressIndicator();
-    //     });
+            return MaterialApp(
+              title: 'GiDDong',
+              theme: ThemeData(
+                  primarySwatch: Colors.blue, primaryColor: Colors.black),
+              //home: ProfilePage(uid),
+              home: Splash(),
+              debugShowCheckedModeBanner: false,
+            );
+          }
+          return CircularProgressIndicator();
+        });
   }
 }
 
