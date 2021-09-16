@@ -61,21 +61,33 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("signUpPage"),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Text(
+          "SignUp Page",
+          style: TextStyle(color: Colors.black, letterSpacing: 5),
+        ),
       ),
       body: Center(
           child: Container(
-        width: 200,
+        width: 400,
         height: 600,
         child: Column(
           children: [
+            SizedBox(
+              height: 30,
+            ),
             TextFormField(
               controller: _userNameController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'User Name',
               ),
+            ),
+            SizedBox(
+              height: 10,
             ),
             TextFormField(
               controller: _idController,
@@ -84,12 +96,18 @@ class _SignUpPageState extends State<SignUpPage> {
                 labelText: 'User E-mail',
               ),
             ),
+            SizedBox(
+              height: 10,
+            ),
             TextFormField(
               controller: _passwordController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'User Password',
               ),
+            ),
+            SizedBox(
+              height: 10,
             ),
             Row(
               children: [
@@ -107,6 +125,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       });
                     }),
               ],
+            ),
+            SizedBox(
+              width: 10,
             ),
             TextButton(
                 onPressed: () {

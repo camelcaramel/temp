@@ -17,27 +17,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: _initalization,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            // TODO: error handling need
-            print("firebase init error occurred");
-          }
-          if (snapshot.connectionState == ConnectionState.done) {
-            print('connection no problem');
+    String uid = "rF1WcFOen4Y8Zg0aGCosUeKmSzq2";
+    // return ProfilePage(uid);
 
-            return MaterialApp(
-              title: 'GiDDong',
-              theme: ThemeData(
-                primarySwatch: Colors.blue,
-              ),
-              home: Splash(),
-              debugShowCheckedModeBanner: false,
-            );
-          }
-          return CircularProgressIndicator();
-        });
+    // return FutureBuilder(
+    //     future: _initalization,
+    //     builder: (context, snapshot) {
+    //       if (snapshot.hasError) {
+    //         // TODO: error handling need
+    //         print("firebase init error occurred");
+    //       }
+    //       if (snapshot.connectionState == ConnectionState.done) {
+    //         print('connection no problem');
+
+    return MaterialApp(
+      title: 'GiDDong',
+      theme: ThemeData(primarySwatch: Colors.blue, primaryColor: Colors.black),
+      home: ProfilePage(uid),
+      // home: Splash(),
+      debugShowCheckedModeBanner: false,
+    );
+    //       }
+    //       return CircularProgressIndicator();
+    //     });
   }
 }
 
@@ -91,6 +93,8 @@ class _SplashState extends State<Splash> {
           return LoginPage();
         } else {
           String uid = nullSaftyUid(snapshot.data);
+          //TODO: remove this line
+          uid = "rF1WcFOen4Y8Zg0aGCosUeKmSzq2";
           return ProfilePage(uid);
         }
       },

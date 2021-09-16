@@ -3,17 +3,22 @@ import 'package:flutter/material.dart';
 class LoginStyleSheet {
   static final emailInputDeco = new InputDecoration(
     icon: Icon(Icons.email),
-    labelText: "이메일",
+    labelText: "email",
   );
   static final passwordInputDeco = new InputDecoration(
     icon: Icon(Icons.password),
-    labelText: "비밀번호",
+    labelText: "password",
   );
   static final nameInputDeco = new InputDecoration(
     icon: Icon(Icons.people),
-    labelText: "이름",
+    labelText: "name",
   );
   static final loginInputBoxDeco = new BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(10),
+    border: Border.all(color: Colors.blue),
+  );
+  static final BoxDecoration TextboxDeco = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(10),
     border: Border.all(color: Colors.blue),

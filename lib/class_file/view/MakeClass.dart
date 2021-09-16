@@ -45,6 +45,9 @@ class _MakeClassState extends State<MakeClass> {
                   )),
             ],
           ),
+          SizedBox(
+            height: 15,
+          ),
           Row(
             //새 클래스 이름 입력
             mainAxisAlignment: MainAxisAlignment.center,
@@ -60,6 +63,9 @@ class _MakeClassState extends State<MakeClass> {
                     controller: classPresenter.classcode,
                   )),
             ],
+          ),
+          SizedBox(
+            height: 15,
           ),
           Row(
             //모두 입력하고 버튼 눌렀을때

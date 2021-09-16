@@ -27,27 +27,37 @@ class _JoinClassState extends State<JoinClass> {
         appBar: AppBar(
           title: Text('Join Class'),
         ),
-        body: Column(
-          children: [
-            TextField(
-              //obscureText: true,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Class Code',
-              ),
-              controller: joinClassPreseter.classCode,
+        body: Center(
+          child: Container(
+            width: 500,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextField(
+                  //obscureText: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Class Code',
+                  ),
+                  controller: joinClassPreseter.classCode,
+                ),
+                SizedBox(
+                  height: 15,
+                ),
+                Container(
+                    width: 300,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          joinClassPreseter.whenClickJoin();
+                        });
+                      },
+                      child: Text('Accept'),
+                    ))
+              ],
             ),
-            Container(
-                width: 300,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      joinClassPreseter.whenClickJoin();
-                    });
-                  },
-                  child: Text('Accept'),
-                ))
-          ],
+          ),
         ));
   }
 }

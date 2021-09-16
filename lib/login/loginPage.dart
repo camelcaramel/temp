@@ -33,9 +33,14 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("loginPage"),
-      ),
+          title: Text(
+            "Login Page",
+            style: TextStyle(color: Colors.black, letterSpacing: 5),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0),
       body: Center(
           child: Container(
         width: 200,
@@ -43,17 +48,30 @@ class _LoginPageState extends State<LoginPage> {
         child: Form(
           key: _formKey,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                decoration: LoginStyleSheet.loginInputBoxDeco,
+                width: 300,
+                height: 50,
+                //decoration: LoginStyleSheet.loginInputBoxDeco,
                 child: TextFormField(
                   controller: _idController,
                   decoration: LoginStyleSheet.emailInputDeco,
                 ),
               ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: LoginStyleSheet.passwordInputDeco,
+              SizedBox(
+                height: 10,
+              ),
+              Container(
+                width: 300,
+                height: 50,
+                child: TextFormField(
+                  controller: _passwordController,
+                  decoration: LoginStyleSheet.passwordInputDeco,
+                ),
+              ),
+              SizedBox(
+                height: 20,
               ),
               TextButton(
                   onPressed: () {
@@ -77,7 +95,9 @@ class _LoginPageState extends State<LoginPage> {
                     });
                   },
                   child: Text("Login")),
-              //TextButton(onPressed: () {}, child: Text("Join The Class")),
+              SizedBox(
+                height: 10,
+              ),
               TextButton(
                   onPressed: () {
                     //TODO: 디버그 프린트 문 지우기
@@ -85,7 +105,10 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(context,
                         MaterialPageRoute(builder: (context) => SignUpPage()));
                   },
-                  child: Text("Sign Up"))
+                  child: Text("Sign Up")),
+              SizedBox(
+                height: 200,
+              )
             ],
           ),
         ),

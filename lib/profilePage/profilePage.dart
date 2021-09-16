@@ -193,8 +193,14 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     if (infoReady)
       return Scaffold(
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text("profilePage ${info.getUID}"),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            "Profile Page ${info.getUID}",
+            style: TextStyle(color: Colors.black, letterSpacing: 5),
+          ),
         ),
         floatingActionButton: FloatingActionButton(
             // project 만들기 버튼
@@ -211,6 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 //새 클래스 제작
                 Container(
                   width: 300,
+                  margin: EdgeInsets.only(left: 10),
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
@@ -225,6 +232,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 //현재 유저 클래스 확인
                 Container(
                   width: 300,
+                  margin: EdgeInsets.only(left: 10),
                   child: ElevatedButton(
                     onPressed: () {
                       /*
@@ -240,6 +248,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Container(
+                  margin: EdgeInsets.only(left: 10),
                   width: 300,
                   child: ElevatedButton(
                     onPressed: () {
@@ -257,6 +266,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 )
               ],
             ),
+            SizedBox(
+              height: 10,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -269,14 +281,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Text("공유된 프로젝트 리스트", textAlign: TextAlign.center))
               ],
             ),
+            SizedBox(
+              height: 20,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 myProjects.isEmpty
-                    ? Container()
+                    ? Container(
+                        height: 400,
+                        width: 300,
+                      )
                     : Container(
                         // 내가 지금까지 만든 프로젝트 리스트 디스플레이
-                        height: 600,
+                        height: 500,
                         width: 300,
                         child: ListView.builder(
                             itemCount: myProjects.length,
@@ -289,9 +307,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 200,
                 ),
                 sharedProjects.isEmpty
-                    ? Container()
+                    ? Container(
+                        height: 500,
+                        width: 300,
+                      )
                     : Container(
-                        height: 600,
+                        height: 400,
                         width: 300,
                         child: ListView.builder(
                             itemCount: sharedProjects.length,
